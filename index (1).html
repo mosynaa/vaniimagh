@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ordini</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+
+    #cartPopup {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border: 2px solid #0077b6;
+  border-radius: 10px;
+  padding: 20px;
+  z-index: 1001;
+  max-width: 90%;
+  width: 400px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+#cartPopup h2 {
+  margin-top: 0;
+  color: #0077b6;
+}
+
+#cartPopup button {
+  margin-top: 15px;
+  background-color: #f97316;
+}
+
+    #showCartBtn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 8px 12px;
+  background-color: #0077b6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#showCartBtn:hover {
+  background-color: #023e8a;
+}
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #0077b6;
+      margin-bottom: 20px;
+
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 4px;
+      box-sizing: border-box;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background-color: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: left;
+    }
+    th {
+      background-color: #f97316;
+      color: white;
+    }
+    .controls {
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      padding: 8px 12px;
+      background-color: #0077b6;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #023e8a;
+    }
+    #extraPopup {
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border: 2px solid #0077b6;
+      padding: 15px;
+      border-radius: 10px;
+      z-index: 1000;
+      width: 90%;
+      max-width: 500px;
+    }
+    #extraPopup h2 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #extraPopup input {
+      width: 100%;
+    }
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+      }
+      table, th, td {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+<button id="showCartBtn">🛒 Mostra Carrello</button>
+
+<h1>Ordini</h1>
+
+<div class="controls">
+  <input type="text" id="cliente" placeholder="Nome cliente" />
+  <input type="text" id="search" placeholder="Cerca..." />
+  <button onclick="generateExcel()">Genera XLS</button>
+  <button id="openExtraBtn">+ Articoli Extra</button>
+</div>
+  
+  <div style="margin-top: 10px;">
+  <textarea id="note" rows="3" style="width: 100%;" placeholder="Note aggiuntive..."></textarea>
+</div>
+
+
+<table id="catalogoTable">
+
+  <thead>
+    <tr>
+      <th>Codice</th>
+      <th>Descrizione</th>
+      <th>Quantità</th>
+      <th>Prezzo</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+  <div id="cartPopup">
+  <div id="cartContent">
+    <h2>Carrello Riepilogativo</h2>
+    <div id="cartItems"></div>
+    <button id="closeCartBtn">Chiudi</button>
+  </div>
+</div>
+
+
+
+<script>
+  
+ function showCart() {
+  const cartPopup = document.getElementById("cartPopup");
+  const cartItemsDiv = document.getElementById("cartItems");
+
+  cartItemsDiv.innerHTML = ""; // Puliamo il carrello ogni volta
+
+  let cartItems = [];
+
+  // Troviamo gli articoli con quantità inserita
+  document.querySelectorAll("#catalogoTable tbody tr").forEach(row => {
+    const codiceInput = row.cells[0].querySelector("input");
+    const descrizioneInput = row.cells[1].querySelector("input");
+    const qtInput = row.cells[2].querySelector("input");
+
+    const codice = codiceInput ? codiceInput.value.trim() : row.cells[0].textContent.trim();
+    const descrizione = descrizioneInput ? descrizioneInput.value.trim() : row.cells[1].textContent.trim();
+    const qt = qtInput ? qtInput.value : "";
+
+    if (qt && qt > 0) {
+      cartItems.push({ codice, descrizione, quantita: qt });
+    }
+  });
+
+  if (cartItems.length > 0) {
+    cartItems.forEach(item => {
+      cartItemsDiv.innerHTML += `<p>${item.codice}  ${item.descrizione}  ${item.quantita}</p>`;
+    });
+  } else {
+    cartItemsDiv.innerHTML = `<p>Nessun articolo selezionato.</p>`;
+  }
+
+  cartPopup.style.display = "block"; // Mostriamo il popup
+}
+
+
+function closeCart() {
+  document.getElementById("cartPopup").style.display = "none";
+}
+
+// Colleghiamo le funzioni ai pulsanti
+document.getElementById("showCartBtn").addEventListener("click", showCart);
+document.getElementById("closeCartBtn").addEventListener("click", closeCart);
+
+  const inputData = {};
+
+  async function loadCSVFromGitHub() {
+    const url = "https://raw.githubusercontent.com/mosynaa/ordinecil/main/catalogo.csv";
+    const response = await fetch(url);
+    const text = await response.text();
+    const rows = text.trim().split("\n").slice(1).map(row => row.split(","));
+    const tbody = document.querySelector("#catalogoTable tbody");
+    tbody.innerHTML = "";
+
+    rows.forEach(([codice, descrizione, categoria, prezzo]) => {
+      const row = document.createElement("tr");
+
+      const qtKey = `qt_${codice}`;
+      const ppKey = `pp_${codice}`;
+
+      row.innerHTML = `
+        <td>${codice}</td>
+        <td>${descrizione}</td>
+        <td><input type="text" placeholder="CT" value="${inputData[qtKey] || ""}" oninput="inputData['${qtKey}']=this.value" /></td>
+        <td><input type="text" placeholder="P.P." value="${inputData[ppKey] || ""}" oninput="inputData['${ppKey}']=this.value" /></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  document.getElementById("search").addEventListener("input", function () {
+    const filter = this.value.toLowerCase();
+    const rows = document.querySelectorAll("#catalogoTable tbody tr");
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(filter) ? "" : "none";
+    });
+  });
+
+function generateExcel() {
+  const clientName = document.getElementById('cliente').value || 'Cliente';
+  const note = document.getElementById('note').value.trim();
+  const table = document.getElementById('catalogoTable');
+  const rows = table.querySelectorAll('tbody tr');
+  const orderItems = [];
+
+  rows.forEach(row => {
+    const codice = row.cells[0].querySelector('input')?.value.trim() || row.cells[0].textContent.trim();
+const descrizione = row.cells[1].querySelector('input')?.value.trim() || row.cells[1].textContent.trim();
+    const quantitaInput = row.cells[2].querySelector('input')?.value.trim();
+    const prezzoInput = row.cells[3].querySelector('input')?.value.trim();
+
+    if (quantitaInput !== "") {
+      let quantitaFinale = /^\d+$/.test(quantitaInput)
+        ? `${quantitaInput} CT`
+        : quantitaInput;
+
+      let prezzoFinale = prezzoInput !== "" ? prezzoInput : "P.P.";
+
+      orderItems.push({
+        Codice: codice,
+        Descrizione: descrizione,
+        Quantità: quantitaFinale,
+        'Prezzo': prezzoFinale
+      });
+    }
+  });
+
+  if (orderItems.length === 0) {
+    alert('Nessun articolo selezionato.');
+    return;
+  }
+    if (note) {
+    orderItems.push({ Codice: "", Descrizione: "Note:", Quantità: "", Prezzo: "" });
+    orderItems.push({ Codice: "", Descrizione: note, Quantità: "", Prezzo: "" });
+  }
+
+
+  const ws = XLSX.utils.json_to_sheet(orderItems);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Ordine");
+
+  XLSX.writeFile(wb, `Ordine_${clientName}.xlsx`);
+}
+
+  function openExtraPopup() {
+    document.getElementById("extraPopup").style.display = "block";
+  }
+
+  function closeExtraPopup() {
+    document.getElementById("extraPopup").style.display = "none";
+  }
+
+function addExtraRow() {
+  const tbody = document.querySelector("#catalogoTable tbody"); // Tabella principale
+  const row = document.createElement("tr");
+
+  row.innerHTML = `
+    <td><input type="text" placeholder="Codice" /></td>
+    <td><input type="text" placeholder="Descrizione" /></td>
+    <td><input type="text" placeholder="CT" /></td>
+    <td><input type="text" placeholder="P.P." /></td>
+  `;
+
+  tbody.prepend(row); // 🔥 Inserisce la nuova riga in cima alla tabella
+}
+
+// Associa la funzione al pulsante giusto
+document.getElementById("openExtraBtn").addEventListener("click", addExtraRow);
+
+  window.onload = loadCSVFromGitHub;
+</script>
+
+</body>
+</html>
