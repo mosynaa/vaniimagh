@@ -226,20 +226,24 @@ document.getElementById("closeCartBtn").addEventListener("click", closeCart);
     const tbody = document.querySelector("#catalogoTable tbody");
     tbody.innerHTML = "";
 
-    rows.forEach(([codice, descrizione, categoria, prezzo]) => {
-      const row = document.createElement("tr");
+   rows.forEach(([codice, descrizione, categoria, prezzo, foto]) => {
+  const row = document.createElement("tr");
 
-      const qtKey = `qt_${codice}`;
-      const ppKey = `pp_${codice}`;
+  const qtKey = `qt_${codice}`;
+  const ppKey = `pp_${codice}`;
 
-      row.innerHTML = `
-        <td>${codice}</td>
-        <td>${descrizione}</td>
-        <td><input type="text" placeholder="CT" value="${inputData[qtKey] || ""}" oninput="inputData['${qtKey}']=this.value" /></td>
-        <td><input type="text" placeholder="P.P." value="${inputData[ppKey] || ""}" oninput="inputData['${ppKey}']=this.value" /></td>
-      `;
-      tbody.appendChild(row);
-    });
+  row.innerHTML = `
+    <td>${codice}</td>
+    <td>
+      ${foto ? `<img src="${foto}" alt="${descrizione}" style="height:40px; margin-right:5px;">` : ""}
+      ${descrizione}
+    </td>
+    <td><input type="text" placeholder="CT" value="${inputData[qtKey] || ""}" oninput="inputData['${qtKey}']=this.value" /></td>
+    <td><input type="text" placeholder="P.P." value="${inputData[ppKey] || ""}" oninput="inputData['${ppKey}']=this.value" /></td>
+  `;
+  tbody.appendChild(row);
+});
+
   }
 
   document.getElementById("search").addEventListener("input", function () {
